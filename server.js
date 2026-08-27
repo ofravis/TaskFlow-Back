@@ -13,27 +13,58 @@ const tarefas = [
 app.use(express.json());
 
 let proximaId = 4;
+
+// Criar nova tarefa
 app.post('/tarefas', (req, res) => {
-    const {texto, prioridade, coluna, cidade} = req.body;
+    const { texto, prioridade, coluna, cidade } = req.body;
+
+    if (!texto) {
+        return res.status(400).json({ erro: 'O campo texto é obrigatório' });
+    }
+
     const novaTarefa = {
-        id:     proximaId++,
-        texto:  texto,
-        prioridade: prioridade ||'media',
-        coluna: coluna ||'afazer',
-        cidade: cidade ||'',
+        id: proximaId++,
+        texto: texto,
+        prioridade: prioridade || 'media',
+        coluna: coluna || 'afazer',
+        cidade: cidade || '',
     };
 
-app.put('/tarefas/:id', (req, res) => {
-    
-})
-
-
-tarefas.push(novaTarefa);
-res.status(201).json(novaTarefa);
+    tarefas.push(novaTarefa);
+    res.status(201).json(novaTarefa);
 });
 
+// Atualizar tarefa por ID
+app.put('/tarefas/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const tarefa = tarefas.find(t => t.id === id);
 
+    if (!tarefa) {
+        return res.status(404).json({ erro: 'Tarefa não encontrada' });
+    }
 
+    const { texto, prioridade, coluna, cidade } = req.body;
+
+    if (texto !== undefined) tarefa.texto = texto;
+    if (prioridade !== undefined) tarefa.prioridade = prioridade;
+    if (coluna !== undefined) tarefa.coluna = coluna;
+    if (cidade !== undefined) tarefa.cidade = cidade;
+
+    res.json(tarefa);
+});
+
+// Deletar tarefa por ID
+app.delete('/tarefas/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const index = tarefas.findIndex(t => t.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ erro: 'Tarefa não encontrada' });
+    }
+
+    const [tarefaRemovida] = tarefas.splice(index, 1);
+    res.json({ mensagem: 'Tarefa removida com sucesso', tarefa: tarefaRemovida });
+});
 
 // Rota raiz
 app.get('/', (req, res) => {
@@ -84,7 +115,10 @@ app.get('/tarefas/:id', (req, res) => {
     res.json(tarefa);
 });
 
-// Middleware de rota 404 (deve ficar após todas as rotas válidas)
+let usuarios = [{ id: 1, nome: 'admin', email: 'admin@taskflow.com', senha: '1234' }];
+let proximoIdUsuario = 2;
+
+// Middleware de rota 404 (deve ficar sempre após as rotas válidas e antes do listen)
 app.use((req, res) => {
     res.status(404).json({
         erro: 'Rota não encontrada',
@@ -93,7 +127,7 @@ app.use((req, res) => {
     });
 });
 
-// Inicialização do servidor (deve ficar sempre ao final)
+// Inicialização do servidor
 app.listen(PORTA, () => {
     console.log(`Servidor rodando em http://localhost:${PORTA}`);
 });
