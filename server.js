@@ -10,6 +10,10 @@ const tarefas = [
     { id: 3, texto: 'Testar Postman', prioridade: 'media', coluna: 'concluido' },
 ];
 
+
+
+
+
 app.use(express.json());
 
 let proximaId = 4;
@@ -115,8 +119,16 @@ app.get('/tarefas/:id', (req, res) => {
     res.json(tarefa);
 });
 
-let usuarios = [{ id: 1, nome: 'admin', email: 'admin@taskflow.com', senha: '1234' }];
-let proximoIdUsuario = 2;
+// Adicionar junto com os dados em memória (no topo do arquivo)
+const usuarios = [
+    { id: 1, nome: 'admin', email: 'admin@taskflow.com' }
+];
+
+// ROTA 5 — Listar usuários (adicionar antes do middleware 404)
+app.get('/usuarios', (req, res) => {
+    res.json(usuarios);
+});
+
 
 // Middleware de rota 404 (deve ficar sempre após as rotas válidas e antes do listen)
 app.use((req, res) => {
