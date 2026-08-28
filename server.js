@@ -10,10 +10,6 @@ const tarefas = [
     { id: 3, texto: 'Testar Postman', prioridade: 'media', coluna: 'concluido' },
 ];
 
-
-
-
-
 app.use(express.json());
 
 let proximaId = 4;
@@ -38,7 +34,7 @@ app.post('/tarefas', (req, res) => {
     res.status(201).json(novaTarefa);
 });
 
-// Atualizar tarefa por ID
+
 app.put('/tarefas/:id', (req, res) => {
     const id = Number(req.params.id);
     const tarefa = tarefas.find(t => t.id === id);
@@ -57,7 +53,7 @@ app.put('/tarefas/:id', (req, res) => {
     res.json(tarefa);
 });
 
-// Deletar tarefa por ID
+
 app.delete('/tarefas/:id', (req, res) => {
     const id = Number(req.params.id);
     const index = tarefas.findIndex(t => t.id === id);
@@ -70,29 +66,24 @@ app.delete('/tarefas/:id', (req, res) => {
     res.json({ mensagem: 'Tarefa removida com sucesso', tarefa: tarefaRemovida });
 });
 
-// Rota raiz
+
 app.get('/', (req, res) => {
     res.json({ api: 'TaskFlow', versao: '1.0', status: 'online' });
 });
 
-// Rotas de teste
 app.get('/ok', (req, res) => {
     res.json({ status: 'ok', dados: [1, 2, 3] });
 });
-
 app.get('/criado', (req, res) => {
     res.status(201).json({ mensagem: 'Criado com sucesso' });
 });
-
 app.get('/erro', (req, res) => {
     res.status(400).json({ erro: 'Dados inválidos' });
 });
-
 app.get('/texto', (req, res) => {
     res.send('Resposta em texto simples');
 });
 
-// Listar tarefas (com suporte a filtros via query)
 app.get('/tarefas', (req, res) => {
     const { coluna, prioridade } = req.query;
     let resultado = tarefas;
@@ -119,18 +110,18 @@ app.get('/tarefas/:id', (req, res) => {
     res.json(tarefa);
 });
 
-// Adicionar junto com os dados em memória (no topo do arquivo)
+
 const usuarios = [
     { id: 1, nome: 'admin', email: 'admin@taskflow.com' }
 ];
 
-// ROTA 5 — Listar usuários (adicionar antes do middleware 404)
+
 app.get('/usuarios', (req, res) => {
     res.json(usuarios);
 });
 
 
-// Middleware de rota 404 (deve ficar sempre após as rotas válidas e antes do listen)
+// Middleware de rota 404
 app.use((req, res) => {
     res.status(404).json({
         erro: 'Rota não encontrada',
