@@ -21,15 +21,12 @@ router.get('/:id', (req, res) => {
 
 router.post('/', (req, res) => {
     const { nome, email } = req.body;
-
     if (!nome || !email) {
         return res.status(400).json({ erro: 'Nome e email obrigatórios' });
     }
-
     if (usuarios.find(u => u.email === email)) {
         return res.status(400).json({ erro: 'Email já cadastrado' });
     }
-
     const novo = { id: proximoId++, nome, email };
     usuarios.push(novo);
     res.status(201).json(novo);
