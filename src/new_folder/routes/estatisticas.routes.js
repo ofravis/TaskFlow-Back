@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 let usuarios = [];
 let proximoId = 1;
+let usuarioId = 1;
+
     router.get('/', (req, res) => res.json(usuarios));
     router.get('/:id', (req, res) => {
 const u = usuarios.find(u => u.id === parseInt(req.params.id));
@@ -18,6 +20,14 @@ return res.status(400).json({ erro: 'Email já cadastrado' });
 const novo = { id: proximoId++, nome, email };
     usuarios.push(novo);
     res.status(201).json(novo);
+});
+
+router.post('/usuarioId', (req, res) => {
+const { usuarioId } = req.body;
+    if (!usuarioId) return res.status(400).json({ erro: 'usuarioId é obrigatório' });
+    const usuario = usuarios.find(u => u.id === parseInt(usuarioId));
+    if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado' });
+    res.json(usuario);
 });
 
 router.put('/:id', (req, res) => {
