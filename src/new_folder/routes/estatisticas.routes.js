@@ -30,6 +30,7 @@ const { usuarioId } = req.body;
     res.json(usuario);
 });
 
+
 router.put('/:id', (req, res) => {
 const idx = usuarios.findIndex(u => u.id === parseInt(req.params.id));
     if (idx === -1) return res.status(404).json({ erro: 'Usuário não encontrado' });
