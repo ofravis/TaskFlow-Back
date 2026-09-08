@@ -7,10 +7,14 @@ let proximoId = 3;
 module.exports = {
     listar: () => tarefas,
     listarPorColuna: (coluna) => tarefas.filter(tarefa => tarefa.coluna === coluna),
+    listarPorUsuario: (usuarioId) => tarefas.filter(tarefa => tarefa.usuarioId === usuarioId),
+    listarPorProjeto: (projetoId) => tarefas.filter(tarefa => tarefa.projetoId === projetoId),
     buscar: (id) => tarefas.find(tarefa => tarefa.id === id),
 
-    adicionar: ({ texto, prioridade = 'media', coluna = 'afazer' }) => {
+    adicionar: ({ texto, prioridade = 'media', coluna = 'afazer', usuarioId, projetoId }) => {
         const nova = { id: proximoId++, texto, prioridade, coluna };
+        if (usuarioId !== undefined) nova.usuarioId = usuarioId;
+        if (projetoId !== undefined) nova.projetoId = projetoId;
         tarefas.push(nova);
         return nova;
     },

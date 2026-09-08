@@ -1,16 +1,16 @@
-let usuarios = [];
-let proximoId = 1;
+const usuarioModel = require('../models/usuario.model');
+const tarefaModel = require('../models/tarefa.models');
 
 const idValido = (valor) => /^\d+$/.test(valor) && Number(valor) > 0;
 
 const usuariosController = {
     listar(req, res) {
-        res.json(usuarios);
+        res.json(usuarioModel.listar());
     },
 
     buscarPorId(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
-        const usuario = usuarios.find(item => item.id === Number(req.params.id));
+        const usuario = usuarioModel.buscar(Number(req.params.id));
         if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado' });
         res.json(usuario);
     },
@@ -21,20 +21,18 @@ const usuariosController = {
             return res.status(400).json({ erro: 'Nome e email obrigatórios' });
         }
         const emailNormalizado = email.trim().toLowerCase();
-        if (usuarios.some(usuario => usuario.email === emailNormalizado)) {
+        if (usuarioModel.listar().some(usuario => usuario.email === emailNormalizado)) {
             return res.status(400).json({ erro: 'Email já cadastrado' });
         }
 
-        const novoUsuario = { id: proximoId++, nome: nome.trim(), email: emailNormalizado };
-        usuarios.push(novoUsuario);
+        const novoUsuario = usuarioModel.adicionar({ nome: nome.trim(), email: emailNormalizado });
         res.status(201).json(novoUsuario);
     },
 
     atualizar(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
         const id = Number(req.params.id);
-        const indice = usuarios.findIndex(usuario => usuario.id === id);
-        if (indice === -1) return res.status(404).json({ erro: 'Usuário não encontrado' });
+        if (!usuarioModel.buscar(id)) return res.status(404).json({ erro: 'Usuário não encontrado' });
 
         const { nome, email } = req.body;
         if (nome !== undefined && (typeof nome !== 'string' || !nome.trim())) {
@@ -44,26 +42,27 @@ const usuariosController = {
             return res.status(400).json({ erro: 'Email inválido' });
         }
         const emailNormalizado = email === undefined ? undefined : email.trim().toLowerCase();
-        if (emailNormalizado && usuarios.some(usuario => usuario.email === emailNormalizado && usuario.id !== id)) {
+        if (emailNormalizado && usuarioModel.listar().some(usuario => usuario.email === emailNormalizado && usuario.id !== id)) {
             return res.status(400).json({ erro: 'Email já cadastrado' });
         }
 
-        usuarios[indice] = {
-            ...usuarios[indice],
+        const usuario = usuarioModel.atualizar(id, {
             ...(nome !== undefined && { nome: nome.trim() }),
             ...(emailNormalizado !== undefined && { email: emailNormalizado }),
-            id,
-        };
-        res.json(usuarios[indice]);
+        });
+        res.json(usuario);
     },
 
     remover(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
         const id = Number(req.params.id);
-        const indice = usuarios.findIndex(usuario => usuario.id === id);
-        if (indice === -1) return res.status(404).json({ erro: 'Usuário não encontrado' });
+        const usuario = usuarioModel.buscar(id);
+        if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado' });
+        if (tarefaModel.listarPorUsuario(id).length > 0) {
+            return res.status(400).json({ erro: 'Usuário possui tarefas. Remova as tarefas antes de deletar o usuário.' });
+        }
 
-        const usuarioRemovido = usuarios.splice(indice, 1)[0];
+        const usuarioRemovido = usuarioModel.remover(id);
         res.json({ mensagem: 'Usuário removido', usuario: usuarioRemovido });
     },
 };
