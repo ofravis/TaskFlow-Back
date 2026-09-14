@@ -3,13 +3,11 @@ const express = require('express');
 const tarefasRoutes = require('./src/new_folder/routes/tarefas.routes');
 const usuariosRoutes = require('./src/new_folder/routes/usuarios.routes');
 const projetosRoutes = require('./src/new_folder/routes/projetos.routes');
-
-const cors = require('cors');
 const logger = require('./src/new_folder/middlewares/logger');
 const corsMiddleware = require('./src/new_folder/middlewares/cors');
 
 const app = express();
-const PORTA = 3000;
+const PORTA = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(logger);
