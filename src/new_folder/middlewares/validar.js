@@ -50,6 +50,18 @@ continue;
 };
     };
     if (!ausente && regras.tipo && typeof valor !== regras.tipo) {
+ (regras.minLength && valor.length < regras.minLength)
+
+erros.push(
+`O campo '${campo}' deve ter ao menos ${regras.minLength} caracteres`
+);
+
+
+if (regras.maxLength && valor.length > regras.maxLength)
+erros.push(
+`O campo '${campo}' deve ter no máximo ${regras.maxLength} caracteres`
+);    
+
 erros.push(
 
 `O campo '${campo}' deve ser do tipo ${regras.tipo}`
