@@ -11,31 +11,43 @@ const logger = require('./src/new_folder/middlewares/logger');
 
 const app = express();
 const PORTA = Number(process.env.PORT || process.env.PORTA || 3001);
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,https://mytaskhub-mg0106gyf-fravis1.vercel.app').split(',').map((origem) => origem.trim()).filter(Boolean);
 
-// 1. Configuração Única do CORS (Antes das rotas)
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'https://mytaskhub-mg0106gyf-fravis1.vercel.app',
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    console.warn(`CORS bloqueado para origem: ${origin}`);
+    callback(new Error('Origem não permitida pelo CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-// 2. Middlewares de parsing e log
+
 app.use(express.json());
 app.use(logger);
 
-// 3. Rotas da Aplicação
+
 app.use('/auth', authRoutes);
 app.use('/tarefas', tarefasRoutes);
 app.use('/usuarios', usuariosRoutes);
 app.use('/projetos', projetosRoutes);
 
-// 4. Rota não encontrada (404)
+
 app.use((req, res) => {
   res.status(404).json({ erro: 'Rota não encontrada' });
 });
 
-// 5. Inicialização do Servidor
-app.listen(PORTA, () => {
-  console.log('Servidor rodando na porta ' + PORTA);
-});
+module.exports = app;
+
+
+if (require.main === module) {
+  app.listen(PORTA, () => {
+    console.log('Servidor rodando na porta ' + PORTA);
+  });
+}
