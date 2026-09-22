@@ -1,5 +1,6 @@
 function corsMiddleware(req, res, next) {
-    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173')
+    const originsFromEnv = process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173';
+    const allowedOrigins = originsFromEnv
         .split(',')
         .map(origem => origem.trim())
         .filter(Boolean);
@@ -9,7 +10,7 @@ function corsMiddleware(req, res, next) {
     if (origin && allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else if (!origin) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
     }
 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');

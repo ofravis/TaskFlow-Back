@@ -2,7 +2,9 @@ const express = require('express');
 
 const router = express.Router();
 const projetosController = require('../controllers/projetos.controller');
+const autenticar = require('../middlewares/autenticar');
 
+router.use(autenticar);
 router.get('/', projetosController.listar);
 router.post('/', projetosController.criar);
 router.get('/:id/resumo', projetosController.resumo);
