@@ -1,5 +1,5 @@
 let usuarios = [
-    { id: 1, nome: 'Admin', email: 'admin@admin.com', senha: '1234' },
+    { id: 1, nome: 'Admin', email: 'admin@admin.com', senha: '123456' },
 ];
 let proximoId = 2;
 

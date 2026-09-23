@@ -22,7 +22,7 @@ const authController = {
                 nome: usuario.nome,
             },
             process.env.JWT_SECRET || 'taskflow-secret-dev',
-            { expiresIn: '8h' }
+            { expiresIn: '24h' }
         );
 
         return res.json({
