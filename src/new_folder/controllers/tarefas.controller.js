@@ -26,8 +26,51 @@ const validarDados = ({ texto, prioridade, coluna, cep }, exigirTexto = false) =
 	return null;
 };
 
+const buscarDadosDoCep = async (cep) => {
+	if (!cep) return { cep: null, cidade: null, uf: null };
+	const cepNormalizado = normalizarCep(cep);
+	if (!cepNormalizado) return { cep: null, cidade: null, uf: null };
+
+	try {
+		const resposta = await fetch(`https://brasilapi.com.br/api/cep/v2/${cepNormalizado.replace('-', '')}`);
+		if (!resposta.ok) throw new Error('CEP não encontrado');
+		const dados = await resposta.json();
+		return {
+			cep: normalizarCep(dados.cep || cepNormalizado) || cepNormalizado,
+			cidade: dados.city || dados.localidade || null,
+			uf: dados.state || dados.uf || null,
+		};
+	} catch (erro) {
+		try {
+			const respostaFallback = await fetch(`https://viacep.com.br/ws/${cepNormalizado.replace('-', '')}/json/`);
+			const dadosFallback = await respostaFallback.json();
+			if (dadosFallback.erro) throw new Error('CEP não encontrado');
+			return {
+				cep: normalizarCep(dadosFallback.cep || cepNormalizado) || cepNormalizado,
+				cidade: dadosFallback.localidade || null,
+				uf: dadosFallback.uf || null,
+			};
+		} catch {
+			return { cep: cepNormalizado, cidade: null, uf: null };
+		}
+	}
+};
+
+const enriquecerTarefaComCep = async (tarefa) => {
+	if (!tarefa || !tarefa.cep) {
+		return { ...tarefa, cep: tarefa?.cep || null, cidade: tarefa?.cidade || null, uf: tarefa?.uf || null };
+	}
+	const dadosEndereco = await buscarDadosDoCep(tarefa.cep);
+	return {
+		...tarefa,
+		cep: dadosEndereco.cep || tarefa.cep,
+		cidade: tarefa.cidade || dadosEndereco.cidade,
+		uf: tarefa.uf || dadosEndereco.uf,
+	};
+};
+
 const tarefasController = {
-	listar(req, res) {
+	async listar(req, res) {
 		const { coluna, prioridade, usuarioId } = req.query;
 		if (coluna && !colunasValidas.includes(coluna)) return res.status(400).json({ erro: 'Coluna inválida' });
 		if (prioridade && !prioridadesValidas.includes(prioridade)) return res.status(400).json({ erro: 'Prioridade inválida' });
@@ -36,17 +79,17 @@ const tarefasController = {
 		if (coluna) resultado = resultado.filter(tarefa => tarefa.coluna === coluna);
 		if (prioridade) resultado = resultado.filter(tarefa => tarefa.prioridade === prioridade);
 		if (usuarioId !== undefined) resultado = resultado.filter(tarefa => tarefa.usuarioId === Number(usuarioId));
-		res.json(resultado);
+		res.json(await Promise.all(resultado.map(enriquecerTarefaComCep)));
 	},
 
-	buscarPorId(req, res) {
+	async buscarPorId(req, res) {
 		if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
 		const tarefa = tarefaModel.buscar(Number(req.params.id));
 		if (!tarefa) return res.status(404).json({ erro: 'Tarefa não encontrada' });
-		res.json(tarefa);
+		res.json(await enriquecerTarefaComCep(tarefa));
 	},
 
-	criar(req, res) {
+	async criar(req, res) {
 		const erro = validarDados(req.body, true);
 		if (erro) return res.status(400).json({ erro });
 		if (req.body.usuarioId !== undefined && !usuarioModel.buscar(Number(req.body.usuarioId))) {
@@ -68,11 +111,13 @@ const tarefasController = {
 			usuarioId: req.body.usuarioId === undefined ? undefined : Number(req.body.usuarioId),
 			projetoId: req.body.projetoId === undefined ? undefined : Number(req.body.projetoId),
 			cep,
+			cidade: req.body.cidade,
+			uf: req.body.uf,
 		});
-		res.status(201).json(novaTarefa);
+		res.status(201).json(await enriquecerTarefaComCep(novaTarefa));
 	},
 
-	atualizar(req, res) {
+	async atualizar(req, res) {
 		if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
 		const erro = validarDados(req.body);
 		if (erro) return res.status(400).json({ erro });
@@ -91,7 +136,7 @@ const tarefasController = {
 			return res.status(400).json({ erro: 'Limite de 2 tarefas em andamento por usuário atingido' });
 		}
 		const dados = {};
-		for (const campo of ['texto', 'prioridade', 'coluna', 'usuarioId', 'projetoId', 'cep']) {
+		for (const campo of ['texto', 'prioridade', 'coluna', 'usuarioId', 'projetoId', 'cep', 'cidade', 'uf']) {
 			if (req.body[campo] !== undefined) {
 				dados[campo] = campo === 'texto' ? req.body[campo].trim() : req.body[campo];
 				if (campo === 'cep') dados[campo] = normalizarCep(req.body[campo]);
@@ -104,7 +149,7 @@ const tarefasController = {
 		}
 
 		const tarefa = tarefaModel.atualizar(id, dados);
-		res.json(tarefa);
+		res.json(await enriquecerTarefaComCep(tarefa));
 	},
 
 	remover(req, res) {
