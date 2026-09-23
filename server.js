@@ -12,10 +12,8 @@ const logger = require('./src/new_folder/middlewares/logger');
 const app = express();
 const PORTA = Number(process.env.PORT || process.env.PORTA || 3001);
 
-const cors = require('cors');
-
 app.use(cors({
-  origin: true, // Reflete dinamicamente a origem exata de quem faz a requisição
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
