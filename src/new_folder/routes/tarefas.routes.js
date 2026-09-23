@@ -12,7 +12,8 @@ router.get('/resumo', tarefasController.resumo);
 router.get('/', tarefasController.listar);
 router.post('/', validar(schemas.tarefa), tarefasController.criar);
 router.get('/:id', tarefasController.buscarPorId);
-router.put('/:id', validar(schemas.tarefa), tarefasController.atualizar);
+router.put('/:id', validar(schemas.tarefaEdicao), tarefasController.atualizar);
+router.patch('/:id', validar(schemas.tarefaEdicao), tarefasController.atualizar);
 router.delete('/:id', tarefasController.remover);
 
 module.exports = router;

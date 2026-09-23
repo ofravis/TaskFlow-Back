@@ -7,11 +7,22 @@ const colunasValidas = ['afazer', 'andamento', 'concluido'];
 
 const idValido = (valor) => /^\d+$/.test(valor) && Number(valor) > 0;
 
-const validarDados = ({ texto, prioridade, coluna }, exigirTexto = false) => {
+const normalizarCep = (valor) => {
+	if (valor === undefined || valor === null) return undefined;
+	const cep = String(valor).replace(/\D/g, '');
+	if (!/^\d{8}$/.test(cep)) return null;
+	return `${cep.slice(0, 5)}-${cep.slice(5)}`;
+};
+
+const validarDados = ({ texto, prioridade, coluna, cep }, exigirTexto = false) => {
 	if (exigirTexto && (typeof texto !== 'string' || !texto.trim())) return 'Texto obrigatório';
 	if (texto !== undefined && (typeof texto !== 'string' || !texto.trim())) return 'Texto inválido';
 	if (prioridade !== undefined && !prioridadesValidas.includes(prioridade)) return 'Prioridade inválida. Use: alta, media ou baixa';
 	if (coluna !== undefined && !colunasValidas.includes(coluna)) return 'Coluna inválida. Use: afazer, andamento ou concluido';
+	if (cep !== undefined) {
+		const cepNormalizado = normalizarCep(cep);
+		if (cepNormalizado === null) return 'CEP inválido';
+	}
 	return null;
 };
 
@@ -49,12 +60,14 @@ const tarefasController = {
 			return res.status(400).json({ erro: 'Limite de 2 tarefas em andamento por usuário atingido' });
 		}
 
+		const cep = normalizarCep(req.body.cep);
 		const novaTarefa = tarefaModel.adicionar({
 			texto: req.body.texto.trim(),
 			prioridade: req.body.prioridade,
 			coluna: req.body.coluna,
 			usuarioId: req.body.usuarioId === undefined ? undefined : Number(req.body.usuarioId),
 			projetoId: req.body.projetoId === undefined ? undefined : Number(req.body.projetoId),
+			cep,
 		});
 		res.status(201).json(novaTarefa);
 	},
@@ -78,8 +91,11 @@ const tarefasController = {
 			return res.status(400).json({ erro: 'Limite de 2 tarefas em andamento por usuário atingido' });
 		}
 		const dados = {};
-		for (const campo of ['texto', 'prioridade', 'coluna', 'usuarioId', 'projetoId']) {
-			if (req.body[campo] !== undefined) dados[campo] = campo === 'texto' ? req.body[campo].trim() : req.body[campo];
+		for (const campo of ['texto', 'prioridade', 'coluna', 'usuarioId', 'projetoId', 'cep']) {
+			if (req.body[campo] !== undefined) {
+				dados[campo] = campo === 'texto' ? req.body[campo].trim() : req.body[campo];
+				if (campo === 'cep') dados[campo] = normalizarCep(req.body[campo]);
+			}
 		}
 		if (dados.usuarioId !== undefined) dados.usuarioId = Number(dados.usuarioId);
 		if (dados.projetoId !== undefined) dados.projetoId = Number(dados.projetoId);

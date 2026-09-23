@@ -11,10 +11,11 @@ module.exports = {
     listarPorProjeto: (projetoId) => tarefas.filter(tarefa => tarefa.projetoId === projetoId),
     buscar: (id) => tarefas.find(tarefa => tarefa.id === id),
 
-    adicionar: ({ texto, prioridade = 'media', coluna = 'afazer', usuarioId, projetoId }) => {
+    adicionar: ({ texto, prioridade = 'media', coluna = 'afazer', usuarioId, projetoId, cep }) => {
         const nova = { id: proximoId++, texto, prioridade, coluna };
         if (usuarioId !== undefined) nova.usuarioId = usuarioId;
         if (projetoId !== undefined) nova.projetoId = projetoId;
+        if (cep !== undefined) nova.cep = cep;
         tarefas.push(nova);
         return nova;
     },
