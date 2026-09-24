@@ -1,9 +1,5 @@
-let tarefas = [
-    { id: 1, texto: 'Estudar Node.js', prioridade: 'alta', coluna: 'andamento' },
-    { id: 2, texto: 'Fazer exercícios', prioridade: 'media', coluna: 'afazer' },
-    { id: 3, texto: 'Ler documentos', prioridade: 'baixa', coluna: 'concluido' },
-];
-let proximoId = 4;
+let tarefas = [];
+let proximoId = 1;
 
 module.exports = {
     listar: () => tarefas,
