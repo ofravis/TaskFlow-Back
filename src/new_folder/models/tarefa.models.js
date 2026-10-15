@@ -1,36 +1,35 @@
-let tarefas = [];
-let proximoId = 1;
+const pool = require('../database/db');
 
 module.exports = {
-    listar: () => tarefas,
-    listarPorColuna: (coluna) => tarefas.filter(tarefa => tarefa.coluna === coluna),
-    listarPorUsuario: (usuarioId) => tarefas.filter(tarefa => tarefa.usuarioId === usuarioId),
-    listarPorProjeto: (projetoId) => tarefas.filter(tarefa => tarefa.projetoId === projetoId),
-    buscar: (id) => tarefas.find(tarefa => tarefa.id === id),
-
-    adicionar: ({ texto, prioridade = 'media', coluna = 'afazer', usuarioId, projetoId, cep, cidade, uf }) => {
-        const nova = { id: proximoId++, texto, prioridade, coluna };
-        if (usuarioId !== undefined) nova.usuarioId = usuarioId;
-        if (projetoId !== undefined) nova.projetoId = projetoId;
-        if (cep !== undefined) nova.cep = cep;
-        if (cidade !== undefined) nova.cidade = cidade;
-        if (uf !== undefined) nova.uf = uf;
-        tarefas.push(nova);
-        return nova;
+    listar: async () => {
+        const result = await pool.query(
+            'SELECT * FROM tarefas ORDER BY id'
+        );
+        return result.rows;
     },
 
-    atualizar: (id, dados) => {
-        const indice = tarefas.findIndex(tarefa => tarefa.id === id);
-        if (indice === -1) return undefined;
-
-        tarefas[indice] = { ...tarefas[indice], ...dados, id };
-        return tarefas[indice];
-    },
-
-    remover: (id) => {
-        const indice = tarefas.findIndex(tarefa => tarefa.id === id);
-        if (indice === -1) return undefined;
-
-        return tarefas.splice(indice, 1)[0];
+    buscar: async (id) => {
+        const result = await pool.query(
+            'SELECT * FROM tarefas WHERE id = $1',
+            [id]
+        );
+        return result.rows[0] || null;
     },
 };
+
+async criar(req, res) {
+    const { texto, prioridade, coluna, usuarioId, ordem } = req.body;
+
+    if (!texto)
+        return res.status(400).json({ error: 'O campo "texto" é obrigatório.' });
+
+    if (!prioridade && prioridade !== 0)
+        return res.status(400).json({ error: 'O campo "prioridade" é obrigatório.' });
+
+    if (!coluna)
+        return res.status(400).json({ error: 'O campo "coluna" é obrigatório.' });
+
+    if (!usuarioId)
+        return res.status(400).json({ error: 'O campo "usuarioId" é obrigatório.' });
+
+    try {

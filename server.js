@@ -70,6 +70,8 @@ app.use((req, res) => {
 
 module.exports = app;
 
+app.use(tratarErros); 
+
 if (require.main === module) {
   app.listen(PORTA, () => {
     console.log('Servidor rodando na porta ' + PORTA);
