@@ -64,16 +64,19 @@ app.use('/tarefas', tarefasRoutes);
 app.use('/usuarios', usuariosRoutes);
 app.use('/projetos', projetosRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({ erro: 'Rota não encontrada' });
-});
-
-module.exports = app;
-
-app.use(tratarErros); 
 
 if (require.main === module) {
   app.listen(PORTA, () => {
     console.log('Servidor rodando na porta ' + PORTA);
   });
 }
+
+app.use((req, res) => {
+  const rota = `${req.method} ${req.url}`;
+  throw criarErro(404, `Rota não encontrada: ${rota}`);
+});
+
+app.use(tratarErros); 
+
+
+module.exports = app;
