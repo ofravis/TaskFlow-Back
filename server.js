@@ -1,4 +1,4 @@
-require('dotenv').config(); // Sempre no topo para carregar as variáveis de ambiente
+require('dotenv').config(); 
 
 const express = require('express');
 const cors = require('cors');
@@ -20,7 +20,6 @@ app.use(cors({
 }));
 
 
-// Lê CORS_ORIGIN (singular), CORS_ORIGINS (plural) e combina com os fallbacks locais
 const envOrigins = (
   process.env.CORS_ORIGIN || 
   process.env.CORS_ORIGINS || 
@@ -48,7 +47,7 @@ app.use(cors({
     }
 
     console.warn(`CORS bloqueado para origem: ${origin}`);
-    // Retorna false em vez de lança um Error(), evitando o Erro 500 no servidor
+    
     callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

@@ -1,35 +1,49 @@
-const pool = require('../database/db');
+let tarefas = [];
+let proximoId = 1;
 
 module.exports = {
-    listar: async () => {
-        const result = await pool.query(
-            'SELECT * FROM tarefas ORDER BY id'
-        );
-        return result.rows;
+    listar: () => tarefas,
+
+    buscar: (id) => tarefas.find((tarefa) => tarefa.id === id),
+
+    listarPorUsuario: (usuarioId) => tarefas.filter((tarefa) => tarefa.usuarioId === usuarioId),
+
+    adicionar: ({ texto, prioridade, coluna, usuarioId, projetoId, cep, cidade, uf, concluidaEm }) => {
+        const novaTarefa = {
+            id: proximoId++,
+            texto,
+            prioridade,
+            coluna,
+            usuarioId,
+            projetoId,
+            cep,
+            cidade,
+            uf,
+            concluidaEm: concluidaEm ?? null,
+        };
+
+        tarefas.push(novaTarefa);
+        return novaTarefa;
     },
 
-    buscar: async (id) => {
-        const result = await pool.query(
-            'SELECT * FROM tarefas WHERE id = $1',
-            [id]
-        );
-        return result.rows[0] || null;
+    atualizar: (id, dados) => {
+        const indice = tarefas.findIndex((tarefa) => tarefa.id === id);
+        if (indice === -1) return undefined;
+
+        tarefas[indice] = {
+            ...tarefas[indice],
+            ...dados,
+            id,
+        };
+
+        return tarefas[indice];
+    },
+
+    remover: (id) => {
+        const indice = tarefas.findIndex((tarefa) => tarefa.id === id);
+        if (indice === -1) return undefined;
+
+        const [tarefaRemovida] = tarefas.splice(indice, 1);
+        return tarefaRemovida;
     },
 };
-
-async criar(req, res) {
-    const { texto, prioridade, coluna, usuarioId, ordem } = req.body;
-
-    if (!texto)
-        return res.status(400).json({ error: 'O campo "texto" é obrigatório.' });
-
-    if (!prioridade && prioridade !== 0)
-        return res.status(400).json({ error: 'O campo "prioridade" é obrigatório.' });
-
-    if (!coluna)
-        return res.status(400).json({ error: 'O campo "coluna" é obrigatório.' });
-
-    if (!usuarioId)
-        return res.status(400).json({ error: 'O campo "usuarioId" é obrigatório.' });
-
-    try {
