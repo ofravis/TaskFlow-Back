@@ -1,9 +1,12 @@
 const tarefaModel = require('../models/tarefa.models');
 const usuarioModel = require('../models/usuario.model');
 const projetoModel = require('../models/projeto.model');
+const criarErro = require('../utils/criarErro');
 
 const prioridadesValidas = ['alta', 'media', 'baixa'];
 const colunasValidas = ['afazer', 'andamento', 'concluido'];
+
+
 
 const idValido = (valor) => /^\d+$/.test(valor) && Number(valor) > 0;
 
@@ -56,7 +59,7 @@ const buscarDadosDoCep = async (cep) => {
 	}
 };
 
-const enriquecerTarefaComCep = async (tarefa) => {
+const tarefacep = async (tarefa) => {
 	if (!tarefa || !tarefa.cep) {
 		return { ...tarefa, cep: tarefa?.cep || null, cidade: tarefa?.cidade || null, uf: tarefa?.uf || null };
 	}
@@ -79,15 +82,18 @@ const tarefasController = {
 		if (coluna) resultado = resultado.filter(tarefa => tarefa.coluna === coluna);
 		if (prioridade) resultado = resultado.filter(tarefa => tarefa.prioridade === prioridade);
 		if (usuarioId !== undefined) resultado = resultado.filter(tarefa => tarefa.usuarioId === Number(usuarioId));
-		res.json(await Promise.all(resultado.map(enriquecerTarefaComCep)));
+		res.json(await Promise.all(resultado.map(tarefacep)));
 	},
 
 	async buscarPorId(req, res) {
 		if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
 		const tarefa = tarefaModel.buscar(Number(req.params.id));
-		if (!tarefa) return res.status(404).json({ erro: 'Tarefa não encontrada' });
-		res.json(await enriquecerTarefaComCep(tarefa));
+		if (!tarefa) {
+		throw criarErro(404, 'Tarefa não encontrada');
+		}
+		res.json(await tarefacep(tarefa));
 	},
+
 
 	async criar(req, res) {
 		const erro = validarDados(req.body, true);
@@ -114,7 +120,7 @@ const tarefasController = {
 			cidade: req.body.cidade,
 			uf: req.body.uf,
 		});
-		res.status(201).json(await enriquecerTarefaComCep(novaTarefa));
+		res.status(201).json(await tarefacep(novaTarefa));
 	},
 
 	async atualizar(req, res) {
@@ -149,7 +155,7 @@ const tarefasController = {
 		}
 
 		const tarefa = tarefaModel.atualizar(id, dados);
-		res.json(await enriquecerTarefaComCep(tarefa));
+		res.json(await tarefacep(tarefa));
 	},
 
 	remover(req, res) {
