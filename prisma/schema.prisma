@@ -1,0 +1,12 @@
+DATABASE_URL="postgresql://...-pooler...?...&connect_timeout=15"
+
+DIRECT_URL="postgresql://......?...&connect_timeout=15"
+datasource db {
+
+provider = "postgresql"
+
+url = env("DATABASE_URL")
+
+directUrl = env("DIRECT_URL")
+
+}

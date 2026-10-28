@@ -27,3 +27,4 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+/src/generated/prisma
