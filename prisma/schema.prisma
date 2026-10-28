@@ -1,12 +1,71 @@
-DATABASE_URL="postgresql://...-pooler...?...&connect_timeout=15"
+generator client {
+  provider = "prisma-client-js"
+}
 
-DIRECT_URL="postgresql://......?...&connect_timeout=15"
 datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
 
-provider = "postgresql"
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cards {
+  id          Int           @id(map: "tarefas_pkey") @default(autoincrement())
+  texto       String
+  coluna      String        @default("todo") @db.VarChar(10)
+  ordem       Int           @default(0)
+  projeto_id  Int
+  usuario_id  Int
+  criado_em   DateTime?     @default(now()) @db.Timestamp(6)
+  projetos    projetos      @relation(fields: [projeto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_projeto_id_fkey")
+  usuarios    usuarios      @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_usuario_id_fkey")
+  comentarios comentarios[]
+}
 
-url = env("DATABASE_URL")
+model comentarios {
+  id            Int       @id @default(autoincrement())
+  texto         String
+  tarefa_id     Int
+  usuario_id    Int
+  criado_em     DateTime? @default(now()) @db.Timestamp(6)
+  atualizado_em DateTime? @default(now()) @db.Timestamp(6)
+  cards         cards     @relation(fields: [tarefa_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios      usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
 
-directUrl = env("DIRECT_URL")
+model projetos {
+  id         Int       @id @default(autoincrement())
+  nome       String    @db.VarChar(100)
+  descricao  String?
+  usuario_id Int
+  criado_em  DateTime? @default(now()) @db.Timestamp(6)
+  cards      cards[]
+  usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tarefas    tarefas[]
+}
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tarefas {
+  id         Int       @id(map: "tarefas_pkey1") @default(autoincrement())
+  texto      String
+  coluna     String    @default("todo") @db.VarChar(10)
+  ordem      Int       @default(0)
+  projeto_id Int
+  usuario_id Int
+  criado_em  DateTime? @default(now()) @db.Timestamp(6)
+  projetos   projetos  @relation(fields: [projeto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_projeto_id_fkey1")
+  usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_usuario_id_fkey1")
+}
+
+model usuarios {
+  id            Int           @id @default(autoincrement())
+  nome          String        @db.VarChar(100)
+  email         String        @unique @db.VarChar(150)
+  senha_hash    String        @db.VarChar(255)
+  criado_em     DateTime?     @default(now()) @db.Timestamp(6)
+  atualizado_em DateTime?     @default(now()) @db.Timestamp(6)
+  cards         cards[]
+  comentarios   comentarios[]
+  projetos      projetos[]
+  tarefas       tarefas[]
 }
