@@ -78,10 +78,10 @@ const tarefasController = {
 		if (coluna && !colunasValidas.includes(coluna)) return res.status(400).json({ erro: 'Coluna inválida' });
 		if (prioridade && !prioridadesValidas.includes(prioridade)) return res.status(400).json({ erro: 'Prioridade inválida' });
 
-		let resultado = tarefaModel.listar();
+		let resultado = await tarefaModel.listar();
 		if (coluna) resultado = resultado.filter(tarefa => tarefa.coluna === coluna);
 		if (prioridade) resultado = resultado.filter(tarefa => tarefa.prioridade === prioridade);
-		if (usuarioId !== undefined) resultado = resultado.filter(tarefa => tarefa.usuarioId === Number(usuarioId));
+		if (usuarioId !== undefined) resultado = resultado.filter(tarefa => (tarefa.usuarioId ?? tarefa.usuario_id) === Number(usuarioId));
 		res.json(await Promise.all(resultado.map(tarefacep)));
 	},
 
@@ -165,10 +165,10 @@ const tarefasController = {
 		res.json({ mensagem: 'Tarefa removida', tarefa: tarefaRemovida });
 	},
 
-	estatisticas(req, res) {
+	async estatisticas(req, res) {
 		const { coluna } = req.query;
 		if (coluna && !colunasValidas.includes(coluna)) return res.status(400).json({ erro: 'Coluna inválida' });
-		const tarefas = tarefaModel.listar();
+		const tarefas = await tarefaModel.listar();
 		const base = coluna ? tarefas.filter(tarefa => tarefa.coluna === coluna) : tarefas;
 		const porColuna = {
 			afazer: base.filter(tarefa => tarefa.coluna === 'afazer').length,
@@ -183,13 +183,13 @@ const tarefasController = {
 		const rankingUsuarios = usuarioModel.listar().map(usuario => ({
 			usuarioId: usuario.id,
 			nome: usuario.nome,
-			totalTarefas: tarefas.filter(tarefa => tarefa.usuarioId === usuario.id).length,
+			totalTarefas: tarefas.filter(tarefa => (tarefa.usuarioId ?? tarefa.usuario_id) === usuario.id).length,
 		})).sort((a, b) => b.totalTarefas - a.totalTarefas);
 		res.json({ coluna: coluna || 'todas', total: base.length, porColuna, porPrioridade, rankingUsuarios });
 	},
 
-	resumo(req, res) {
-		const tarefas = tarefaModel.listar();
+	async resumo(req, res) {
+		const tarefas = await tarefaModel.listar();
 		const concluido = tarefas.filter(tarefa => tarefa.coluna === 'concluido').length;
 		const andamento = tarefas.filter(tarefa => tarefa.coluna === 'andamento').length;
 		const afazer = tarefas.filter(tarefa => tarefa.coluna === 'afazer').length;

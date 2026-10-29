@@ -1,25 +1,28 @@
 const db = require('../database/db');
+const prisma = require('../database/prisma');
 
 const prioridadeModel = {
     listar: async () => {
-        const resultado = await db.query('SELECT * FROM prioridades ORDER BY id');
-        return resultado.rows;
+        const resultado = await prisma.prioridade.findMany({
+            orderBy: {
+                id: 'asc'
+            }
+        });
+        return resultado;
     },
 
     buscarPorId: async (id) => {
-        const resultado = await db.query(
-            'SELECT * FROM prioridades WHERE id = $1',
-            [id]
-        );
-        return resultado.rows[0] || null;
+        const resultado = await prisma.prioridade.findUnique({
+            where: { id }
+        });
+        return resultado;
     },
 
     buscarPorNome: async (nome) => {
-        const resultado = await db.query(
-            'SELECT * FROM prioridades WHERE nome = $1 LIMIT 1',
-            [nome]
-        );
-        return resultado.rows[0] || null;
+        const resultado = await prisma.prioridade.findUnique({
+            where: { nome }
+        });
+        return resultado;
     },
 
     criar: async (dados = {}) => {

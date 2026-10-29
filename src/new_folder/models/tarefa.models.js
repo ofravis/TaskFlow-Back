@@ -1,8 +1,20 @@
+const prisma = require('../database/prisma');
+
 let tarefas = [];
 let proximoId = 1;
 
+const incluirNomes = {
+    projetos: { select: { nome: true } },
+    usuarios: { select: { nome: true } },
+};
+
 module.exports = {
-    listar: () => tarefas,
+    listar: async () => {
+        return prisma.tarefas.findMany({
+            include: incluirNomes,
+            orderBy: { id: 'asc' },
+        });
+    },
 
     buscar: (id) => tarefas.find((tarefa) => tarefa.id === id),
 
