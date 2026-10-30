@@ -10,9 +10,13 @@ const projetosRoutes = require('./src/new_folder/routes/projetos.routes');
 const logger = require('./src/new_folder/middlewares/logger');
 const criarErro = require('./src/new_folder/utils/criarErro');
 const tratarErros = require('./src/new_folder/utils/tratarErros');
+const swaggerUi = require('swagger-ui-express');
+const openapi = require('./src/docs/openapi');
 
 const app = express();
 const PORTA = Number(process.env.PORT || process.env.PORTA || 3001);
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
 
 const envOrigins = (
   process.env.CORS_ORIGIN ||
@@ -22,6 +26,7 @@ const envOrigins = (
 ).split(',');
 
 const defaultOrigins = [
+  'https://localhost:3001',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:3000',
