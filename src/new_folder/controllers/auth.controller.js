@@ -3,7 +3,10 @@ const usuarioModel = require('../models/usuario.model');
 
 const authController = {
     login(req, res) {
-        const { email, senha } = req.body;
+        const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+            ? req.body
+            : {};
+        const { email, senha } = body;
 
         if (typeof email !== 'string' || !email.trim() || typeof senha !== 'string' || !senha.trim()) {
             return res.status(400).json({ erro: 'Email e senha são obrigatórios' });
