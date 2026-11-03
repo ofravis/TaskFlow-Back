@@ -13,6 +13,7 @@ const tratarErros = require('./src/new_folder/utils/tratarErros');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./src/docs/openapi');
 
+
 const app = express();
 const PORTA = Number(process.env.PORT || process.env.PORTA || 3001);
 
@@ -66,6 +67,8 @@ app.use((req, res, next) => {
   const rota = `${req.method} ${req.originalUrl || req.url}`;
   next(criarErro(404, `Rota não encontrada: ${rota}`));
 });
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
 
 app.use(tratarErros);
 
