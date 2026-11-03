@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const jwtSecret = require('../utils/jwtSecret');
 
 function autenticar(req, res, next) {
 const authHeader = req.headers['authorization'];
@@ -15,7 +16,7 @@ return res.status(401)
 
 try {
 
-const payload = jwt.verify(token, process.env.JWT_SECRET);
+const payload = jwt.verify(token, jwtSecret);
 req.usuario = payload;
 
 next();

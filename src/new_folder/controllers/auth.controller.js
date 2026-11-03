@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const usuarioModel = require('../models/usuario.model');
+const jwtSecret = require('../utils/jwtSecret');
 
 const authController = {
     login(req, res) {
@@ -24,7 +25,7 @@ const authController = {
                 email: usuario.email,
                 nome: usuario.nome,
             },
-            process.env.JWT_SECRET || 'taskflow-secret-dev',
+            jwtSecret,
             { expiresIn: '24h' }
         );
 
