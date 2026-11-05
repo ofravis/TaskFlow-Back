@@ -1,19 +1,18 @@
 require('dotenv').config();
 
 const express = require('express');
-const criarErro = require('./src/utils/criarErro');
-const tarefasRoutes  = require('./src/routes/tarefas.routes');
-const usuariosRoutes = require('./src/routes/usuarios.routes');
-const projetosRoutes = require('./src/routes/projetos.routes');
-const authRoutes = require('./src/routes/auth.routes');
-const logger = require('./src/middlewares/logger');
-const validarContentType = require('./src/middlewares/validarContentType');
-const temporizador = require('./src/middlewares/temporizador');
+const criarErro = require('./src/new_folder/utils/criarErro');
+const tarefasRoutes  = require('./src/new_folder/routes/tarefas.routes');
+const usuariosRoutes = require('./src/new_folder/routes/usuarios.routes');
+const projetosRoutes = require('./src/new_folder/routes/projetos.routes');
+const authRoutes = require('./src/new_folder/routes/auth.routes');
+const logger = require('./src/new_folder/middlewares/logger');
+const validarContentType = require('./src/new_folder/middlewares/validarcontenttype');
 const cors = require('cors');
-const autenticar = require('./src/middlewares/autenticar');
-const pool = require('./src/database/db');
-const tratarErros = require('./src/middlewares/erro.middleware');
-const prioridadesRoutes = require('./src/routes/prioridades.routes');
+const autenticar = require('./src/new_folder/middlewares/autenticar');
+const pool = require('./src/new_folder/database/db');
+const tratarErros = require('./src/new_folder/middlewares/erro.middleware');
+const prioridadesRoutes = require('./src/new_folder/routes/prioridade.routes');
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -36,7 +35,6 @@ app.use(cors({
 app.use(express.json());
 app.use(validarContentType);
 app.use(logger);
-app.use(temporizador);
 
 // ── Testando conexão com o banco de dados ────────────────────────────
 pool.query('SELECT NOW()', (err, res) => {

@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
-const jwtSecret = require('../utils/jwtSecret');
+const jwtSecret = process.env.JWT_SECRET;
+
+if (!jwtSecret) {
+    throw new Error('JWT_SECRET precisa estar configurada');
+}
 
 function autenticar(req, res, next) {
 const authHeader = req.headers['authorization'];

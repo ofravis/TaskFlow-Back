@@ -32,7 +32,7 @@ function validar(schema, origem = 'body') {
                     : typeof valor === tipoNormalizado;
 
                 if (tipo === 'integer' || tipo === 'inteiro') {
-                    if (!Number.isInteger(Number(valor))) {
+                    if (typeof valor !== 'number' || !Number.isInteger(valor)) {
                         erros.push(`O campo '${campo}' deve ser um inteiro válido`);
                         continue;
                     }
