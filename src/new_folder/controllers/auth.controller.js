@@ -1,44 +1,39 @@
+const criarErro = require('../utils/criarErro');
 const jwt = require('jsonwebtoken');
 const usuarioModel = require('../models/usuario.model');
-const jwtSecret = require('../utils/jwtSecret');
 
 const authController = {
-    login(req, res) {
-        const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
-            ? req.body
-            : {};
-        const { email, senha } = body;
+  async login(req, res) {
+    const { email, senha } = req.body;
 
-        if (typeof email !== 'string' || !email.trim() || typeof senha !== 'string' || !senha.trim()) {
-            return res.status(400).json({ erro: 'Email e senha são obrigatórios' });
-        }
+    // Validação básica
+    if (!email || !senha)
+      throw criarErro(400, 'Email e senha são obrigatórios');
 
-        const usuario = usuarioModel.buscarPorCredenciais(email.trim(), senha.trim());
+    // 1. Verificar se o usuário existe
+    const usuario = await usuarioModel.buscarPorEmail(email);
+    if (!usuario)
+      throw criarErro(401, 'Credenciais inválidas');
 
-        if (!usuario) {
-            return res.status(401).json({ erro: 'Credenciais inválidas' });
-        }
+    // 2. Verificar a senha
+    // Por enquanto comparação direta — Dia 4 usa hash
+    if (usuario.senha_hash !== senha)
+      throw criarErro(401, 'Credenciais inválidas');
 
-        const token = jwt.sign(
-            {
-                id: usuario.id,
-                email: usuario.email,
-                nome: usuario.nome,
-            },
-            jwtSecret,
-            { expiresIn: '24h' }
-        );
+    // 3. Gerar o token JWT
+    const token = jwt.sign(
+      { id: usuario.id, nome: usuario.nome },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
 
-        return res.json({
-            mensagem: 'Login realizado com sucesso',
-            token,
-            usuario: {
-                id: usuario.id,
-                nome: usuario.nome,
-                email: usuario.email,
-            },
-        });
-    },
+    // 4. Retornar token e dados públicos
+    //    Nunca retornar a senha na resposta
+    res.json({
+      token,
+      usuario: { id: usuario.id, nome: usuario.nome }
+    });
+  },
 };
 
 module.exports = authController;

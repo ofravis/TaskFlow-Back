@@ -1,81 +1,79 @@
 require('dotenv').config();
 
 const express = require('express');
+const criarErro = require('./src/utils/criarErro');
+const tarefasRoutes  = require('./src/routes/tarefas.routes');
+const usuariosRoutes = require('./src/routes/usuarios.routes');
+const projetosRoutes = require('./src/routes/projetos.routes');
+const authRoutes = require('./src/routes/auth.routes');
+const logger = require('./src/middlewares/logger');
+const validarContentType = require('./src/middlewares/validarContentType');
+const temporizador = require('./src/middlewares/temporizador');
 const cors = require('cors');
+const autenticar = require('./src/middlewares/autenticar');
+const pool = require('./src/database/db');
+const tratarErros = require('./src/middlewares/erro.middleware');
+const prioridadesRoutes = require('./src/routes/prioridades.routes');
 
-const authRoutes = require('./src/new_folder/routes/auth.routes');
-const tarefasRoutes = require('./src/new_folder/routes/tarefas.routes');
-const usuariosRoutes = require('./src/new_folder/routes/usuarios.routes');
-const projetosRoutes = require('./src/new_folder/routes/projetos.routes');
-const logger = require('./src/new_folder/middlewares/logger');
-const criarErro = require('./src/new_folder/utils/criarErro');
-const tratarErros = require('./src/new_folder/utils/tratarErros');
 const swaggerUi = require('swagger-ui-express');
+
+const SWAGGER_CDN = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14';
+
+
 const openapi = require('./src/docs/openapi');
 
 
-const app = express();
-const PORTA = Number(process.env.PORT || process.env.PORTA || 3001);
+const app   = express();
+const PORTA = process.env.PORTA || 3001;
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
-
-const envOrigins = (
-  process.env.CORS_ORIGIN ||
-  process.env.CORS_ORIGINS ||
-  process.env.ALLOWED_ORIGINS ||
-  ''
-).split(',');
-
-const defaultOrigins = [
-  'https://localhost:3001',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-  'https://mytaskhub-sooty.vercel.app',
-  'https://mytaskhub-mg0106gyf-fravis1.vercel.app',
-];
-
-const allowedOrigins = [...envOrigins, ...defaultOrigins]
-  .map((origem) => origem.trim())
-  .filter(Boolean);
-
+// ── Middlewares globais — sempre antes das rotas ────────────────────────────
 app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    console.warn(`CORS bloqueado para origem: ${origin}`);
-    callback(null, false);
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  origin:         process.env.CORS_ORIGIN || 'http://localhost:5173',
+  methods:        ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  maxAge:         86400,
 }));
-
 app.use(express.json());
+app.use(validarContentType);
 app.use(logger);
+app.use(temporizador);
 
-app.use('/auth', authRoutes);
-app.use('/tarefas', tarefasRoutes);
-app.use('/usuarios', usuariosRoutes);
-app.use('/projetos', projetosRoutes);
-
-app.use((req, res, next) => {
-  const rota = `${req.method} ${req.originalUrl || req.url}`;
-  next(criarErro(404, `Rota não encontrada: ${rota}`));
+// ── Testando conexão com o banco de dados ────────────────────────────
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) console.error('Erro ao conectar:', err.message);
+  else     console.log('Banco conectado:', res.rows[0].now);
 });
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
+// ── Rota raiz ───────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({ mensagem: 'TaskFlow API funcionando!' });
+});
+
+// ── Rotas dos recursos ──────────────────────────────────────────────────────
+app.use('/tarefas', autenticar, tarefasRoutes);
+app.use('/usuarios', usuariosRoutes);
+app.use('/projetos', projetosRoutes);
+app.use('/auth', authRoutes);
+app.use('/prioridades', autenticar,prioridadesRoutes);
+
+
+// Swagger
+//app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi, {
+  customCssUrl: `${SWAGGER_CDN}/swagger-ui.css`,
+  customJs: [
+    `${SWAGGER_CDN}/swagger-ui-bundle.js`,
+    `${SWAGGER_CDN}/swagger-ui-standalone-preset.js`,
+  ],
+}));
+
+app.use((req, res) => {
+  throw criarErro(404, 'Rota não encontrada');
+});
 
 app.use(tratarErros);
 
-if (require.main === module) {
-  app.listen(PORTA, () => {
-    console.log('Servidor rodando na porta ' + PORTA);
-  });
-}
-
-module.exports = app;
+app.listen(PORTA, () => {
+  console.log(`Servidor rodando em http://localhost:${PORTA}`);
+});

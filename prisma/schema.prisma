@@ -8,29 +8,59 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model cards {
-  id          Int           @id(map: "tarefas_pkey") @default(autoincrement())
-  texto       String
-  coluna      String        @default("todo") @db.VarChar(10)
-  ordem       Int           @default(0)
-  projeto_id  Int
-  usuario_id  Int
-  criado_em   DateTime?     @default(now()) @db.Timestamp(6)
-  projetos    projetos      @relation(fields: [projeto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_projeto_id_fkey")
-  usuarios    usuarios      @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_usuario_id_fkey")
-  comentarios comentarios[]
+model clientes {
+  id              Int       @id @default(autoincrement())
+  nome            String    @db.VarChar(100)
+  data_nascimento DateTime  @db.Date
+  pedidos         pedidos[]
 }
 
 model comentarios {
-  id            Int       @id @default(autoincrement())
-  texto         String
-  tarefa_id     Int
-  usuario_id    Int
-  criado_em     DateTime? @default(now()) @db.Timestamp(6)
-  atualizado_em DateTime? @default(now()) @db.Timestamp(6)
-  cards         cards     @relation(fields: [tarefa_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  usuarios      usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         Int       @id @default(autoincrement())
+  texto      String
+  tarefa_id  Int
+  usuario_id Int
+  criado_em  DateTime? @default(now()) @db.Timestamp(6)
+  tarefas    tarefas   @relation(fields: [tarefa_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model pedidos {
+  id           Int            @id @default(autoincrement())
+  data         DateTime?      @default(now()) @db.Timestamp(6)
+  idcliente    Int?
+  clientes     clientes?      @relation(fields: [idcliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pedidositens pedidositens[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pedidositens {
+  id         Int       @id @default(autoincrement())
+  idpedido   Int?
+  idproduto  Int?
+  valor      Decimal   @db.Decimal(18, 2)
+  desconto   Decimal   @default(0) @db.Decimal(18, 2)
+  quantidade Decimal   @db.Decimal(18, 2)
+  pedidos    pedidos?  @relation(fields: [idpedido], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  produtos   produtos? @relation(fields: [idproduto], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model prioridades {
+  id        Int       @id(map: "prioridades_pk") @default(autoincrement())
+  descricao String    @db.VarChar(20)
+  criado_em DateTime? @default(now()) @db.Timestamp(6)
+  ativo     Boolean   @default(true)
+  cor       String    @default("#94A3B8") @db.VarChar(7)
+  tarefas   tarefas[]
+}
+
+model produtos {
+  id              Int             @id @default(autoincrement())
+  descricao       String?         @db.VarChar(100)
+  idunidademedida Int?
+  pedidositens    pedidositens[]
+  unidadesmedida  unidadesmedida? @relation(fields: [idunidademedida], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model projetos {
@@ -39,33 +69,42 @@ model projetos {
   descricao  String?
   usuario_id Int
   criado_em  DateTime? @default(now()) @db.Timestamp(6)
-  cards      cards[]
   usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tarefas    tarefas[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model tarefas {
-  id         Int       @id(map: "tarefas_pkey1") @default(autoincrement())
-  texto      String
-  coluna     String    @default("todo") @db.VarChar(10)
-  ordem      Int       @default(0)
-  projeto_id Int
-  usuario_id Int
-  criado_em  DateTime? @default(now()) @db.Timestamp(6)
-  projetos   projetos  @relation(fields: [projeto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_projeto_id_fkey1")
-  usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tarefas_usuario_id_fkey1")
+  id           Int           @id @default(autoincrement())
+  texto        String
+  coluna       String        @default("afazer") @db.VarChar(10)
+  ordem        Int           @default(0)
+  projeto_id   Int
+  usuario_id   Int
+  criado_em    DateTime?     @default(now()) @db.Timestamp(6)
+  iniciada_em  DateTime?     @db.Timestamp(6)
+  concluida_em DateTime?     @db.Timestamp(6)
+  idprioridade Int
+  comentarios  comentarios[]
+  prioridades  prioridades   @relation(fields: [idprioridade], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_prioridades_fk")
+  projetos     projetos      @relation(fields: [projeto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios     usuarios      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model unidadesmedida {
+  id        Int        @id @default(autoincrement())
+  sigla     String     @unique @db.VarChar(3)
+  descricao String?    @db.VarChar(30)
+  produtos  produtos[]
 }
 
 model usuarios {
-  id            Int           @id @default(autoincrement())
-  nome          String        @db.VarChar(100)
-  email         String        @unique @db.VarChar(150)
-  senha_hash    String        @db.VarChar(255)
-  criado_em     DateTime?     @default(now()) @db.Timestamp(6)
-  atualizado_em DateTime?     @default(now()) @db.Timestamp(6)
-  cards         cards[]
-  comentarios   comentarios[]
-  projetos      projetos[]
-  tarefas       tarefas[]
+  id          Int           @id @default(autoincrement())
+  nome        String        @db.VarChar(100)
+  email       String        @unique @db.VarChar(150)
+  senha_hash  String        @db.VarChar(255)
+  criado_em   DateTime?     @default(now()) @db.Timestamp(6)
+  comentarios comentarios[]
+  projetos    projetos[]
+  tarefas     tarefas[]
 }
