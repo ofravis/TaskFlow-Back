@@ -16,9 +16,6 @@ const prioridadesRoutes = require('./src/new_folder/routes/prioridade.routes');
 
 const swaggerUi = require('swagger-ui-express');
 
-const SWAGGER_CDN = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14';
-
-
 const openapi = require('./src/docs/openapi');
 
 
@@ -28,7 +25,7 @@ const PORTA = process.env.PORTA || 3001;
 // ── Middlewares globais — sempre antes das rotas ────────────────────────────
 app.use(cors({
   origin:         process.env.CORS_ORIGIN || 'http://localhost:5173',
-  methods:        ['GET', 'POST', 'PUT', 'DELETE'],
+  methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   maxAge:         86400,
 }));
@@ -55,16 +52,8 @@ app.use('/auth', authRoutes);
 app.use('/prioridades', autenticar,prioridadesRoutes);
 
 
-// Swagger
-//app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
-
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi, {
-  customCssUrl: `${SWAGGER_CDN}/swagger-ui.css`,
-  customJs: [
-    `${SWAGGER_CDN}/swagger-ui-bundle.js`,
-    `${SWAGGER_CDN}/swagger-ui-standalone-preset.js`,
-  ],
-}));
+app.get('/docs.json', (req, res) => res.json(openapi));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
 
 app.use((req, res) => {
   throw criarErro(404, 'Rota não encontrada');
