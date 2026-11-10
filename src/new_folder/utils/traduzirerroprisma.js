@@ -2,7 +2,7 @@ const criarErro = require('./criarErro');
  
 function traduzirErroPrisma(erro, metodo) {
   if (erro.code === 'P2002') {
-    const campos = erro.meta?.target; // ex.: ['email']
+    const campos = erro.meta?.target;
     return criarErro(409, 'Já existe um registro com esse valor',
       [`Valor repetido em: ${campos}`]);
   }

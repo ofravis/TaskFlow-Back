@@ -22,7 +22,6 @@ const openapi = require('./src/docs/openapi');
 const app   = express();
 const PORTA = process.env.PORTA || 3001;
 
-// ── Middlewares globais — sempre antes das rotas ────────────────────────────
 app.use(cors({
   origin:         process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -33,18 +32,17 @@ app.use(express.json());
 app.use(validarContentType);
 app.use(logger);
 
-// ── Testando conexão com o banco de dados ────────────────────────────
+
 pool.query('SELECT NOW()', (err, res) => {
   if (err) console.error('Erro ao conectar:', err.message);
   else     console.log('Banco conectado:', res.rows[0].now);
 });
 
-// ── Rota raiz ───────────────────────────────────────────────────────────────
+
 app.get('/', (req, res) => {
   res.json({ mensagem: 'TaskFlow API funcionando!' });
 });
 
-// ── Rotas dos recursos ──────────────────────────────────────────────────────
 app.use('/tarefas', autenticar, tarefasRoutes);
 app.use('/usuarios', usuariosRoutes);
 app.use('/projetos', projetosRoutes);
