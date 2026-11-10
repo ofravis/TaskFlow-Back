@@ -10,8 +10,7 @@ router.post('/', validar(schemas.usuario), usuariosController.criar);
 router.use(autenticar);
 router.get('/', usuariosController.listar);
 router.get('/:id', usuariosController.buscarPorId);
-router.put('/:id', validar(schemas.usuario), usuariosController.atualizar);
+router.put('/:id', validar(schemas.usuarioEdicao), usuariosController.atualizar);
 router.delete('/:id', usuariosController.remover);
 
 module.exports = router;
-

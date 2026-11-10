@@ -1,12 +1,10 @@
-const pool = require('../database/db');
-const prisma = require('../database/prisma'); // ajuste para o seu arquivo de conexão
+const prisma = require('../database/prisma');
 
-let tarefas = [
-  { id: 1, texto: 'Estudar Node',   prioridade: 'alta',  coluna: 'afazer',    usuarioId: null, projetoId: null, concluidaEm: null },
-  { id: 2, texto: 'Criar API',      prioridade: 'alta',  coluna: 'andamento', usuarioId: null, projetoId: null, concluidaEm: null },
-  { id: 3, texto: 'Testar Postman', prioridade: 'media', coluna: 'concluido', usuarioId: null, projetoId: null, concluidaEm: null },
-];
-let proximoId = 4;
+const tarefaJoin = {
+  prioridades: { select: { descricao: true, cor: true } },
+  projetos: { select: { nome: true } },
+  usuarios: { select: { nome: true } },
+};
 
 function formatarTarefa(tarefa) {
   const { projetos, usuarios, prioridades, ...resto } = tarefa;
@@ -19,229 +17,151 @@ function formatarTarefa(tarefa) {
   };
 }
 
-const tarefaJoin = {
-  prioridades: { select: { descricao: true, cor: true } },
-  projetos: { select: { nome: true } },
-  usuarios: { select: { nome: true } }
+async function buscarTarefa(id) {
+  return prisma.tarefas.findUnique({
+    where: { id },
+    include: tarefaJoin,
+  });
 }
 
 const tarefaModel = {
-
   listar: async () => {
-
-    const result = await prisma.tarefas.findMany({
-      select: {
-        id: true,
-        texto: true,
-        coluna: true,
-        usuario_id: true,
-        projeto_id: true,
-        idprioridade: true,
-        concluida_em: true,
-        iniciada_em: true,
-        ordem: true,
-        ...tarefaJoin
-      },
-      orderBy: { id: 'asc' }
+    const tarefas = await prisma.tarefas.findMany({
+      include: tarefaJoin,
+      orderBy: { id: 'asc' },
     });
-
-    return result.map(formatarTarefa);
-    
+    return tarefas.map(formatarTarefa);
   },
 
   buscar: async (id) => {
-    const result = await prisma.tarefas.findUnique({
-      where: { id: id },
-      select: {
-        id: true,
-        texto: true,
-        coluna: true,
-        usuario_id: true,
-        projeto_id: true,
-        idprioridade: true,
-        concluida_em: true,
-        iniciada_em: true,
-        ordem: true,
-        ...tarefaJoin
-      },
-    });
-    return result ? formatarTarefa(result) : null;
-  },      
-
-
-  listarPorColuna: async (coluna) => {
-    const result = await pool.query(
-      'SELECT * FROM tarefas WHERE coluna = $1',
-      [coluna]
-    );
-    return result.rows;
+    const tarefa = await buscarTarefa(id);
+    return tarefa ? formatarTarefa(tarefa) : null;
   },
 
-  listarPorUsuario: async (usuarioId) => {
-    const result = await pool.query(
-      'SELECT * FROM tarefas WHERE usuario_id = $1',
-      [usuarioId]
-    );
-    return result.rows;
-  },
-
-  listarPorProjeto: async (projetoId) => {
-    const result = await pool.query(
-      'SELECT * FROM tarefas WHERE projeto_id = $1',
-      [projetoId]
-    );
-    return result.rows;
-  },
-
-  // ── Contagens — controller só pergunta, model responde ──────────────────
-  // Conta tarefas em andamento de um usuário (excluirId: ignora a própria tarefa no PUT)
-  contarEmAndamentoPorUsuario: async (usuarioId, excluirId) => {
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM tarefas WHERE usuario_id = $1 AND coluna = $2 AND id != $3',
-      [usuarioId, 'andamento', excluirId]
-    );
-    return parseInt(result.rows[0].count);
-  },
-
-  // Conta tarefas vinculadas a um projeto — usado na proteção de delete
-  contarPorProjeto: async (projetoId) => {
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM tarefas WHERE projeto_id = $1',
-      [projetoId]
-    );
-    return parseInt(result.rows[0].count);
-  },
-
-  // Conta tarefas vinculadas a um usuário — usado na proteção de delete
-  contarPorUsuario: async (usuarioId) => {
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM tarefas WHERE usuario_id = $1',
-      [usuarioId]
-    );
-    return parseInt(result.rows[0].count);
-  },
-
-  // ── Agregações ──────────────────────────────────────────────────────────
-  // Total por coluna de uma lista — usado no resumo de projeto
-  totalPorColuna: async (lista) => ({
-    afazer:    lista.filter(t => t.coluna === 'afazer').length,
-    andamento: lista.filter(t => t.coluna === 'andamento').length,
-    concluido: lista.filter(t => t.coluna === 'concluido').length,
+  listarPorColuna: (coluna) => prisma.tarefas.findMany({
+    where: { coluna },
+    orderBy: { id: 'asc' },
   }),
 
-  // Estatísticas gerais — usadas no GET /tarefas/estatisticas
-estatisticas: async (filtroColuna) => {
-  const params = filtroColuna ? [filtroColuna] : [];
-  const where  = filtroColuna ? 'WHERE coluna = $1' : '';
+  listarPorUsuario: (usuarioId) => prisma.tarefas.findMany({
+    where: { usuario_id: usuarioId },
+    orderBy: { id: 'asc' },
+  }),
 
-  const total = await pool.query(
-    `SELECT COUNT(*) AS total FROM tarefas ${where}`, params
-  );
-  const porColuna = await pool.query(
-    `SELECT coluna, COUNT(*) AS total FROM tarefas ${where} GROUP BY coluna`, params
-  );
+  listarPorProjeto: (projetoId) => prisma.tarefas.findMany({
+    where: { projeto_id: projetoId },
+    orderBy: { id: 'asc' },
+  }),
 
-  const totais = { afazer: 0, andamento: 0, concluido: 0 };
-  porColuna.rows.forEach(r => { totais[r.coluna] = parseInt(r.total); });
-
-  return {
-    total: parseInt(total.rows[0].total),
-    porColuna: totais,
-  };
-},
-
-  // Resumo textual — usado no GET /tarefas/estatisticas/resumo
-resumo: async () => {
-  const contagens = await pool.query(
-    'SELECT coluna, COUNT(*) AS total FROM tarefas GROUP BY coluna'
-  );
-  const prioridades = await pool.query(
-    'SELECT prioridade, COUNT(*) AS total FROM tarefas GROUP BY prioridade ORDER BY total DESC LIMIT 1'
-  );
-
-  const totais = { afazer: 0, andamento: 0, concluido: 0 };
-  let totalGeral = 0;
-  contagens.rows.forEach(r => {
-    totais[r.coluna] = parseInt(r.total);
-    totalGeral += parseInt(r.total);
-  });
-
-  const prioridadeDestaque = prioridades.rows[0]?.prioridade || 'nenhuma';
-
-  return (
-    `Você tem ${totalGeral} tarefas. ` +
-    `${totais.concluido} concluída(s), ` +
-    `${totais.andamento} em andamento e ` +
-    `${totais.afazer} a fazer. ` +
-    `Prioridade mais comum: ${prioridadeDestaque}.`
-  );
-},
-
-  // ── Escrita ─────────────────────────────────────────────────────────────
-
-adicionar: async({ texto, idprioridade, coluna, usuario_id, projeto_id, ordem }) => {
-  const tarefa = await prisma.tarefas.create({
-    data: {
-      texto: texto,
-      idprioridade: idprioridade || 2,
-      coluna: coluna || 'afazer',
-      usuario_id: usuario_id,
-      projeto_id: projeto_id,
-      ordem: ordem || 0
+  contarEmAndamentoPorUsuario: async (usuarioId, excluirId) => prisma.tarefas.count({
+    where: {
+      usuario_id: usuarioId,
+      coluna: 'andamento',
+      ...(excluirId !== undefined && { id: { not: excluirId } }),
     },
-    include: tarefaJoin
-  });
-  return formatarTarefa(tarefa);
-},
+  }),
 
-atualizar: async (id, dados) => {
-  const tarefaAtual = await prisma.tarefas.findUnique({
-    where: { id: id },
-  });
-  if (!tarefaAtual) return null; // id não existe → controller lança 404
+  contarPorProjeto: (projetoId) => prisma.tarefas.count({
+    where: { projeto_id: projetoId },
+  }),
 
-  const concluidaEm = dados.coluna === 'concluido' ? new Date() : null;
+  contarPorUsuario: (usuarioId) => prisma.tarefas.count({
+    where: { usuario_id: usuarioId },
+  }),
 
-  let iniciadaEm = tarefaAtual.iniciada_em;
-  if (tarefaAtual.coluna === 'andamento' && dados.coluna === 'afazer') {
-    iniciadaEm = null;
-  } else if (tarefaAtual.coluna === 'afazer' && dados.coluna === 'andamento') {
-    iniciadaEm = new Date();
-  }
+  totalPorColuna: async (lista) => ({
+    afazer: lista.filter(tarefa => tarefa.coluna === 'afazer').length,
+    andamento: lista.filter(tarefa => tarefa.coluna === 'andamento').length,
+    concluido: lista.filter(tarefa => tarefa.coluna === 'concluido').length,
+  }),
 
-  const tarefaAtualizada = await prisma.tarefas.update({
-    where: { id: id },
-    data: {
-      texto: dados.texto,
-      coluna: dados.coluna,
-      usuario_id: dados.usuario_id,
-      projeto_id: dados.projeto_id,
-      idprioridade: dados.idprioridade,
-      concluida_em: concluidaEm,
-      iniciada_em: iniciadaEm,
-      ordem: dados.ordem || 0
-    },
-    include: tarefaJoin
-  });
-
-  return formatarTarefa(tarefaAtualizada);
-},
-  remover: async (id) => {
-    try{
-    const resultado = await prisma.tarefas.delete({
-      where: { id: id },
+  estatisticas: async (filtroColuna) => {
+    const tarefas = await prisma.tarefas.findMany({
+      where: filtroColuna ? { coluna: filtroColuna } : undefined,
+      select: { coluna: true },
     });
-    return formatarTarefa(resultado);
-    }
-    catch (error) {
-      if (error.code === 'P2025') {
-        return null; 
-      }
 
+    const porColuna = { afazer: 0, andamento: 0, concluido: 0 };
+    for (const tarefa of tarefas) {
+      if (Object.hasOwn(porColuna, tarefa.coluna)) porColuna[tarefa.coluna] += 1;
+    }
+
+    return { total: tarefas.length, porColuna };
+  },
+
+  resumo: async () => {
+    const tarefas = await prisma.tarefas.findMany({
+      include: { prioridades: { select: { descricao: true } } },
+    });
+    const totais = { afazer: 0, andamento: 0, concluido: 0 };
+    const prioridades = new Map();
+
+    for (const tarefa of tarefas) {
+      if (Object.hasOwn(totais, tarefa.coluna)) totais[tarefa.coluna] += 1;
+      const descricao = tarefa.prioridades?.descricao;
+      if (descricao) prioridades.set(descricao, (prioridades.get(descricao) || 0) + 1);
+    }
+
+    const prioridadeDestaque = [...prioridades.entries()]
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'nenhuma';
+
+    return `Você tem ${tarefas.length} tarefas. ${totais.concluido} concluída(s), ${totais.andamento} em andamento e ${totais.afazer} a fazer. Prioridade mais comum: ${prioridadeDestaque}.`;
+  },
+
+  adicionar: async ({ texto, idprioridade, coluna, usuario_id, projeto_id, ordem }) => {
+    const tarefa = await prisma.tarefas.create({
+      data: {
+        texto,
+        idprioridade,
+        coluna: coluna || 'afazer',
+        usuario_id,
+        projeto_id,
+        ordem: ordem || 0,
+      },
+      include: tarefaJoin,
+    });
+    return formatarTarefa(tarefa);
+  },
+
+  atualizar: async (id, dados) => {
+    const tarefaAtual = await prisma.tarefas.findUnique({ where: { id } });
+    if (!tarefaAtual) return null;
+
+    const data = {};
+    if (dados.texto !== undefined) data.texto = dados.texto;
+    if (dados.coluna !== undefined) data.coluna = dados.coluna;
+    if (dados.usuario_id !== undefined) data.usuario_id = dados.usuario_id;
+    if (dados.projeto_id !== undefined) data.projeto_id = dados.projeto_id;
+    if (dados.idprioridade !== undefined) data.idprioridade = dados.idprioridade;
+    if (dados.ordem !== undefined) data.ordem = dados.ordem;
+
+    if (dados.coluna !== undefined && dados.coluna !== tarefaAtual.coluna) {
+      data.concluida_em = dados.coluna === 'concluido' ? new Date() : null;
+
+      if (tarefaAtual.coluna === 'afazer' && dados.coluna === 'andamento') {
+        data.iniciada_em = new Date();
+      } else if (dados.coluna === 'afazer') {
+        data.iniciada_em = null;
+      }
+    }
+
+    const tarefa = await prisma.tarefas.update({
+      where: { id },
+      data,
+      include: tarefaJoin,
+    });
+    return formatarTarefa(tarefa);
+  },
+
+  remover: async (id) => {
+    try {
+      const tarefa = await prisma.tarefas.delete({ where: { id } });
+      return formatarTarefa(tarefa);
+    } catch (error) {
+      if (error.code === 'P2025') return null;
       throw error;
     }
-
   },
 };
 
-module.exports = tarefaModel
+module.exports = tarefaModel;

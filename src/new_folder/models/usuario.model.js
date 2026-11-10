@@ -1,11 +1,4 @@
-const db = require('../database/db'); // ajuste para o seu arquivo de conexão
-const prisma = require('../database/prisma'); // ajuste para o seu arquivo de conexão
-
-let usuarios = [
-  { id: 1, nome: 'Admin', email: 'admin@admin.com', senha: '123456' },
-  { id: 2, nome: 'Alan', email: 'alan@example.com', senha: 'senha456' },
-];
-let proximoId = 3;
+const prisma = require('../database/prisma');
 
 module.exports = {
   listar: async () => {
@@ -56,7 +49,7 @@ module.exports = {
       data: {
         nome,
         email,
-        senha
+        senha_hash: senha
       },
       select: {
         id: true,
@@ -75,7 +68,7 @@ module.exports = {
       data: {
         nome: dados.nome || undefined,
         email: dados.email || undefined,
-        senha: dados.senha || undefined
+        senha_hash: dados.senha || undefined
       },
       select: {
         id: true,

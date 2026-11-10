@@ -17,6 +17,11 @@ const prioridadeModel = {
         return resultado;
     },
 
+    buscarPorDescricao: (descricao) => prisma.prioridades.findFirst({
+        where: { descricao, ativo: true },
+        orderBy: { id: 'asc' }
+    }),
+
     criar: async (dados = {}) => {
         return prisma.prioridades.create({ data: dados });
     },

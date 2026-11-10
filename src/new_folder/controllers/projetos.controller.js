@@ -1,61 +1,67 @@
 const projetoModel = require('../models/projeto.model');
 const tarefaModel = require('../models/tarefa.models');
 
-const idValido = (valor) => /^\d+$/.test(valor) && Number(valor) > 0;
+const idValido = (valor) => /^\d+$/.test(String(valor)) && Number(valor) > 0;
 
 const projetosController = {
-    listar(req, res) {
-        res.json(projetoModel.listar());
+    async listar(req, res) {
+        res.json(await projetoModel.listar(req.usuario.id));
     },
 
-    buscarPorId(req, res) {
+    async buscarPorId(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
-        const projeto = projetoModel.buscar(Number(req.params.id));
+        const projeto = await projetoModel.buscar(Number(req.params.id), req.usuario.id);
         if (!projeto) return res.status(404).json({ erro: 'Projeto não encontrado' });
         res.json(projeto);
     },
 
-    criar(req, res) {
+    async criar(req, res) {
         const { nome, descricao } = req.body;
         if (typeof nome !== 'string' || !nome.trim()) {
             return res.status(400).json({ erro: 'Nome obrigatório' });
         }
-        const projeto = projetoModel.adicionar({ nome: nome.trim(), descricao: descricao === undefined ? '' : descricao });
+        const projeto = await projetoModel.adicionar({
+            nome: nome.trim(),
+            descricao: descricao === undefined ? '' : descricao,
+            usuario_id: req.usuario.id,
+        });
         res.status(201).json(projeto);
     },
 
-    atualizar(req, res) {
+    async atualizar(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
-        const id = Number(req.params.id);
-        if (!projetoModel.buscar(id)) return res.status(404).json({ erro: 'Projeto não encontrado' });
         const { nome, descricao } = req.body;
         if (nome !== undefined && (typeof nome !== 'string' || !nome.trim())) {
             return res.status(400).json({ erro: 'Nome inválido' });
         }
-        const projeto = projetoModel.atualizar(id, {
+
+        const dados = {
             ...(nome !== undefined && { nome: nome.trim() }),
             ...(descricao !== undefined && { descricao }),
-        });
+        };
+        const projeto = await projetoModel.atualizar(Number(req.params.id), req.usuario.id, dados);
+        if (!projeto) return res.status(404).json({ erro: 'Projeto não encontrado' });
         res.json(projeto);
     },
 
-    remover(req, res) {
+    async remover(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
         const id = Number(req.params.id);
-        const projeto = projetoModel.buscar(id);
+        const projeto = await projetoModel.buscar(id, req.usuario.id);
         if (!projeto) return res.status(404).json({ erro: 'Projeto não encontrado' });
-        if (tarefaModel.listarPorProjeto(id).length > 0) {
+        if (await tarefaModel.contarPorProjeto(id) > 0) {
             return res.status(400).json({ erro: 'Projeto possui tarefas associadas. Remova as tarefas antes.' });
         }
-        res.json({ mensagem: 'Projeto removido', projeto: projetoModel.remover(id) });
+
+        res.json({ mensagem: 'Projeto removido', projeto: await projetoModel.remover(id, req.usuario.id) });
     },
 
-    resumo(req, res) {
+    async resumo(req, res) {
         if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
         const id = Number(req.params.id);
-        const projeto = projetoModel.buscar(id);
+        const projeto = await projetoModel.buscar(id, req.usuario.id);
         if (!projeto) return res.status(404).json({ erro: 'Projeto não encontrado' });
-        const tarefas = tarefaModel.listarPorProjeto(id);
+        const tarefas = await tarefaModel.listarPorProjeto(id);
         res.json({
             projeto,
             totalTarefas: tarefas.length,

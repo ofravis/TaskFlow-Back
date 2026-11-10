@@ -1,6 +1,7 @@
 const tarefaModel = require('../models/tarefa.models');
 const usuarioModel = require('../models/usuario.model');
 const projetoModel = require('../models/projeto.model');
+const prioridadeModel = require('../models/prioridade.models');
 const criarErro = require('../utils/criarErro');
 
 const prioridadesValidas = ['alta', 'media', 'baixa'];
@@ -87,9 +88,9 @@ const tarefasController = {
 
 	async buscarPorId(req, res) {
 		if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
-		const tarefa = tarefaModel.buscar(Number(req.params.id));
+		const tarefa = await tarefaModel.buscar(Number(req.params.id));
 		if (!tarefa) {
-		throw criarErro(404, 'Tarefa não encontrada');
+			throw criarErro(404, 'Tarefa não encontrada');
 		}
 		res.json(await tarefacep(tarefa));
 	},
@@ -98,24 +99,35 @@ const tarefasController = {
 	async criar(req, res) {
 		const erro = validarDados(req.body, true);
 		if (erro) return res.status(400).json({ erro });
-		if (req.body.usuarioId !== undefined && !usuarioModel.buscar(Number(req.body.usuarioId))) {
+		const usuarioId = req.body.usuarioId === undefined ? Number(req.usuario.id) : Number(req.body.usuarioId);
+		if (!await usuarioModel.buscar(usuarioId)) {
 			return res.status(400).json({ erro: 'Usuário não encontrado' });
 		}
-		if (req.body.projetoId !== undefined && !projetoModel.buscar(Number(req.body.projetoId))) {
-			return res.status(400).json({ erro: 'Projeto não encontrado' });
+
+		let projeto;
+		if (req.body.projetoId === undefined) {
+			projeto = await projetoModel.obterOuCriarPadrao(Number(req.usuario.id));
+		} else {
+			if (!idValido(req.body.projetoId)) return res.status(400).json({ erro: 'ID de projeto inválido' });
+			projeto = await projetoModel.buscar(Number(req.body.projetoId), Number(req.usuario.id));
+			if (!projeto) return res.status(400).json({ erro: 'Projeto não encontrado' });
 		}
-		if (req.body.coluna === 'andamento' && req.body.usuarioId !== undefined &&
-			tarefaModel.listarPorUsuario(Number(req.body.usuarioId)).filter(tarefa => tarefa.coluna === 'andamento').length >= 2) {
+
+		if (req.body.coluna === 'andamento' &&
+			await tarefaModel.contarEmAndamentoPorUsuario(usuarioId) >= 2) {
 			return res.status(400).json({ erro: 'Limite de 2 tarefas em andamento por usuário atingido' });
 		}
 
+		const prioridade = await prioridadeModel.buscarPorDescricao(req.body.prioridade || 'media');
+		if (!prioridade) throw criarErro(500, 'Prioridades não configuradas no banco de dados');
+
 		const cep = normalizarCep(req.body.cep);
-		const novaTarefa = tarefaModel.adicionar({
+		const novaTarefa = await tarefaModel.adicionar({
 			texto: req.body.texto.trim(),
-			prioridade: req.body.prioridade,
+			idprioridade: prioridade.id,
 			coluna: req.body.coluna,
-			usuarioId: req.body.usuarioId === undefined ? undefined : Number(req.body.usuarioId),
-			projetoId: req.body.projetoId === undefined ? undefined : Number(req.body.projetoId),
+			usuario_id: usuarioId,
+			projeto_id: projeto.id,
 			cep,
 			cidade: req.body.cidade,
 			uf: req.body.uf,
@@ -128,39 +140,41 @@ const tarefasController = {
 		const erro = validarDados(req.body);
 		if (erro) return res.status(400).json({ erro });
 		const id = Number(req.params.id);
-		const atual = tarefaModel.buscar(id);
+		const atual = await tarefaModel.buscar(id);
 		if (!atual) return res.status(404).json({ erro: 'Tarefa não encontrada' });
-		if (req.body.usuarioId !== undefined && !usuarioModel.buscar(Number(req.body.usuarioId))) {
+		const usuarioId = req.body.usuarioId === undefined ? atual.usuario_id : Number(req.body.usuarioId);
+		if (!await usuarioModel.buscar(usuarioId)) {
 			return res.status(400).json({ erro: 'Usuário não encontrado' });
 		}
-		if (req.body.projetoId !== undefined && !projetoModel.buscar(Number(req.body.projetoId))) {
-			return res.status(400).json({ erro: 'Projeto não encontrado' });
+		let projeto;
+		if (req.body.projetoId !== undefined) {
+			if (!idValido(req.body.projetoId)) return res.status(400).json({ erro: 'ID de projeto inválido' });
+			projeto = await projetoModel.buscar(Number(req.body.projetoId), Number(req.usuario.id));
+			if (!projeto) return res.status(400).json({ erro: 'Projeto não encontrado' });
 		}
-		const usuarioId = req.body.usuarioId === undefined ? atual.usuarioId : Number(req.body.usuarioId);
-		if (req.body.coluna === 'andamento' && atual.coluna !== 'andamento' && usuarioId !== undefined &&
-			tarefaModel.listarPorUsuario(usuarioId).filter(tarefa => tarefa.coluna === 'andamento' && tarefa.id !== id).length >= 2) {
+		if (req.body.coluna === 'andamento' && atual.coluna !== 'andamento' &&
+			await tarefaModel.contarEmAndamentoPorUsuario(usuarioId, id) >= 2) {
 			return res.status(400).json({ erro: 'Limite de 2 tarefas em andamento por usuário atingido' });
 		}
+
 		const dados = {};
-		for (const campo of ['texto', 'prioridade', 'coluna', 'usuarioId', 'projetoId', 'cep', 'cidade', 'uf']) {
-			if (req.body[campo] !== undefined) {
-				dados[campo] = campo === 'texto' ? req.body[campo].trim() : req.body[campo];
-				if (campo === 'cep') dados[campo] = normalizarCep(req.body[campo]);
-			}
-		}
-		if (dados.usuarioId !== undefined) dados.usuarioId = Number(dados.usuarioId);
-		if (dados.projetoId !== undefined) dados.projetoId = Number(dados.projetoId);
-		if (req.body.coluna !== undefined && req.body.coluna !== atual.coluna) {
-			dados.concluidaEm = req.body.coluna === 'concluido' ? new Date().toISOString() : null;
+		if (req.body.texto !== undefined) dados.texto = req.body.texto.trim();
+		if (req.body.coluna !== undefined) dados.coluna = req.body.coluna;
+		if (req.body.usuarioId !== undefined) dados.usuario_id = usuarioId;
+		if (projeto) dados.projeto_id = projeto.id;
+		if (req.body.prioridade !== undefined) {
+			const prioridade = await prioridadeModel.buscarPorDescricao(req.body.prioridade);
+			if (!prioridade) throw criarErro(500, 'Prioridades não configuradas no banco de dados');
+			dados.idprioridade = prioridade.id;
 		}
 
-		const tarefa = tarefaModel.atualizar(id, dados);
+		const tarefa = await tarefaModel.atualizar(id, dados);
 		res.json(await tarefacep(tarefa));
 	},
 
-	remover(req, res) {
+	async remover(req, res) {
 		if (!idValido(req.params.id)) return res.status(400).json({ erro: 'ID inválido' });
-		const tarefaRemovida = tarefaModel.remover(Number(req.params.id));
+		const tarefaRemovida = await tarefaModel.remover(Number(req.params.id));
 		if (!tarefaRemovida) return res.status(404).json({ erro: 'Tarefa não encontrada' });
 		res.json({ mensagem: 'Tarefa removida', tarefa: tarefaRemovida });
 	},
@@ -180,7 +194,8 @@ const tarefasController = {
 			media: base.filter(tarefa => tarefa.prioridade === 'media').length,
 			baixa: base.filter(tarefa => tarefa.prioridade === 'baixa').length,
 		};
-		const rankingUsuarios = usuarioModel.listar().map(usuario => ({
+		const usuarios = await usuarioModel.listar();
+		const rankingUsuarios = usuarios.map(usuario => ({
 			usuarioId: usuario.id,
 			nome: usuario.nome,
 			totalTarefas: tarefas.filter(tarefa => (tarefa.usuarioId ?? tarefa.usuario_id) === usuario.id).length,

@@ -23,6 +23,12 @@ const schemas = {
         senha: { obrigatorio: true, type: 'string', minLength: 6 },
     },
 
+    usuarioEdicao: {
+        nome: { obrigatorio: false, type: 'string', minLength: 3 },
+        email: { obrigatorio: false, type: 'string', formato: 'email' },
+        senha: { obrigatorio: false, type: 'string', minLength: 6 },
+    },
+
     projeto: {
         nome: { obrigatorio: true, type: 'string' },
         descricao: { obrigatorio: false, type: 'string', maxLength: 200 },
